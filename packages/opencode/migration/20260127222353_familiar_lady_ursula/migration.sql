@@ -5,37 +5,10 @@ CREATE TABLE "project" (
 	"name" text,
 	"icon_url" text,
 	"icon_color" text,
-	"time_created" integer NOT NULL,
-	"time_updated" integer NOT NULL,
-	"time_initialized" integer,
-	"sandboxes" text NOT NULL
-);
---> statement-breakpoint
-CREATE TABLE "message" (
-	"id" text PRIMARY KEY,
-	"session_id" text NOT NULL,
-	"time_created" integer NOT NULL,
-	"time_updated" integer NOT NULL,
-	"data" text NOT NULL,
-	CONSTRAINT "fk_message_session_id_session_id_fk" FOREIGN KEY ("session_id") REFERENCES "session"("id") ON DELETE CASCADE
-);
---> statement-breakpoint
-CREATE TABLE "part" (
-	"id" text PRIMARY KEY,
-	"message_id" text NOT NULL,
-	"session_id" text NOT NULL,
-	"time_created" integer NOT NULL,
-	"time_updated" integer NOT NULL,
-	"data" text NOT NULL,
-	CONSTRAINT "fk_part_message_id_message_id_fk" FOREIGN KEY ("message_id") REFERENCES "message"("id") ON DELETE CASCADE
-);
---> statement-breakpoint
-CREATE TABLE "permission" (
-	"project_id" text PRIMARY KEY,
-	"time_created" integer NOT NULL,
-	"time_updated" integer NOT NULL,
-	"data" text NOT NULL,
-	CONSTRAINT "fk_permission_project_id_project_id_fk" FOREIGN KEY ("project_id") REFERENCES "project"("id") ON DELETE CASCADE
+	"time_created" bigint NOT NULL,
+	"time_updated" bigint NOT NULL,
+	"time_initialized" bigint,
+	"sandboxes" jsonb NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "session" (
@@ -50,14 +23,41 @@ CREATE TABLE "session" (
 	"summary_additions" integer,
 	"summary_deletions" integer,
 	"summary_files" integer,
-	"summary_diffs" text,
-	"revert" text,
-	"permission" text,
-	"time_created" integer NOT NULL,
-	"time_updated" integer NOT NULL,
-	"time_compacting" integer,
-	"time_archived" integer,
+	"summary_diffs" jsonb,
+	"revert" jsonb,
+	"permission" jsonb,
+	"time_created" bigint NOT NULL,
+	"time_updated" bigint NOT NULL,
+	"time_compacting" bigint,
+	"time_archived" bigint,
 	CONSTRAINT "fk_session_project_id_project_id_fk" FOREIGN KEY ("project_id") REFERENCES "project"("id") ON DELETE CASCADE
+);
+--> statement-breakpoint
+CREATE TABLE "message" (
+	"id" text PRIMARY KEY,
+	"session_id" text NOT NULL,
+	"time_created" bigint NOT NULL,
+	"time_updated" bigint NOT NULL,
+	"data" jsonb NOT NULL,
+	CONSTRAINT "fk_message_session_id_session_id_fk" FOREIGN KEY ("session_id") REFERENCES "session"("id") ON DELETE CASCADE
+);
+--> statement-breakpoint
+CREATE TABLE "part" (
+	"id" text PRIMARY KEY,
+	"message_id" text NOT NULL,
+	"session_id" text NOT NULL,
+	"time_created" bigint NOT NULL,
+	"time_updated" bigint NOT NULL,
+	"data" jsonb NOT NULL,
+	CONSTRAINT "fk_part_message_id_message_id_fk" FOREIGN KEY ("message_id") REFERENCES "message"("id") ON DELETE CASCADE
+);
+--> statement-breakpoint
+CREATE TABLE "permission" (
+	"project_id" text PRIMARY KEY,
+	"time_created" bigint NOT NULL,
+	"time_updated" bigint NOT NULL,
+	"data" jsonb NOT NULL,
+	CONSTRAINT "fk_permission_project_id_project_id_fk" FOREIGN KEY ("project_id") REFERENCES "project"("id") ON DELETE CASCADE
 );
 --> statement-breakpoint
 CREATE TABLE "todo" (
@@ -66,8 +66,8 @@ CREATE TABLE "todo" (
 	"status" text NOT NULL,
 	"priority" text NOT NULL,
 	"position" integer NOT NULL,
-	"time_created" integer NOT NULL,
-	"time_updated" integer NOT NULL,
+	"time_created" bigint NOT NULL,
+	"time_updated" bigint NOT NULL,
 	CONSTRAINT "todo_pk" PRIMARY KEY("session_id", "position"),
 	CONSTRAINT "fk_todo_session_id_session_id_fk" FOREIGN KEY ("session_id") REFERENCES "session"("id") ON DELETE CASCADE
 );
@@ -77,8 +77,8 @@ CREATE TABLE "session_share" (
 	"id" text NOT NULL,
 	"secret" text NOT NULL,
 	"url" text NOT NULL,
-	"time_created" integer NOT NULL,
-	"time_updated" integer NOT NULL,
+	"time_created" bigint NOT NULL,
+	"time_updated" bigint NOT NULL,
 	CONSTRAINT "fk_session_share_session_id_session_id_fk" FOREIGN KEY ("session_id") REFERENCES "session"("id") ON DELETE CASCADE
 );
 --> statement-breakpoint

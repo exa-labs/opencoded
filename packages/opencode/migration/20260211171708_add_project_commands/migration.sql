@@ -1,1 +1,1 @@
-ALTER TABLE "project" ADD COLUMN "commands" text;
+ALTER TABLE "project" ADD COLUMN "commands" jsonb;
