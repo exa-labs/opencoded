@@ -106,10 +106,10 @@ export namespace PermissionNext {
     ),
   }
 
-  const state = Instance.state(() => {
+  const state = Instance.state(async () => {
     const projectID = Instance.project.id
-    const row = Database.use((db) =>
-      db.select().from(PermissionTable).where(eq(PermissionTable.project_id, projectID)).get(),
+    const [row] = await Database.use(async (db) =>
+      db.select().from(PermissionTable).where(eq(PermissionTable.project_id, projectID)).limit(1),
     )
     const stored = row?.data ?? ([] as Ruleset)
 

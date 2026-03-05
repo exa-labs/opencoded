@@ -19,16 +19,16 @@ export namespace Control {
     }
   }
 
-  export function account(): Account | undefined {
-    const row = Database.use((db) =>
-      db.select().from(ControlAccountTable).where(eq(ControlAccountTable.active, true)).get(),
+  export async function account(): Promise<Account | undefined> {
+    const [row] = await Database.use(async (db) =>
+      db.select().from(ControlAccountTable).where(eq(ControlAccountTable.active, true)).limit(1),
     )
     return row ? fromRow(row) : undefined
   }
 
   export async function token(): Promise<string | undefined> {
-    const row = Database.use((db) =>
-      db.select().from(ControlAccountTable).where(eq(ControlAccountTable.active, true)).get(),
+    const [row] = await Database.use(async (db) =>
+      db.select().from(ControlAccountTable).where(eq(ControlAccountTable.active, true)).limit(1),
     )
     if (!row) return undefined
     if (row.token_expiry && row.token_expiry > Date.now()) return row.access_token
@@ -50,7 +50,7 @@ export namespace Control {
       expires_in?: number
     }
 
-    Database.use((db) =>
+    await Database.use(async (db) =>
       db
         .update(ControlAccountTable)
         .set({
@@ -58,8 +58,7 @@ export namespace Control {
           refresh_token: json.refresh_token ?? row.refresh_token,
           token_expiry: json.expires_in ? Date.now() + json.expires_in * 1000 : undefined,
         })
-        .where(and(eq(ControlAccountTable.email, row.email), eq(ControlAccountTable.url, row.url)))
-        .run(),
+        .where(and(eq(ControlAccountTable.email, row.email), eq(ControlAccountTable.url, row.url))),
     )
 
     return json.access_token

@@ -249,15 +249,14 @@ export const SessionRoutes = lazy(() =>
 
         // Single transaction for the entire import — dramatically faster than
         // individual inserts, especially for sessions with hundreds of messages.
-        Database.transaction((tx) => {
+        await Database.transaction(async (tx) => {
           const row = { ...Session.toRow(body.info), project_id: Instance.project.id }
-          tx.insert(SessionTable)
+          await tx.insert(SessionTable)
             .values(row)
             .onConflictDoUpdate({ target: SessionTable.id, set: { project_id: row.project_id } })
-            .run()
 
           for (const msg of body.messages) {
-            tx.insert(MessageTable)
+            await tx.insert(MessageTable)
               .values({
                 id: msg.info.id,
                 session_id: sessionID,
@@ -265,10 +264,9 @@ export const SessionRoutes = lazy(() =>
                 data: msg.info,
               })
               .onConflictDoNothing()
-              .run()
 
             for (const part of msg.parts) {
-              tx.insert(PartTable)
+              await tx.insert(PartTable)
                 .values({
                   id: part.id,
                   message_id: msg.info.id,
@@ -276,7 +274,6 @@ export const SessionRoutes = lazy(() =>
                   data: part,
                 })
                 .onConflictDoNothing()
-                .run()
             }
           }
         })

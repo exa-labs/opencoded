@@ -88,6 +88,10 @@ let cli = yargs(hideBin(process.argv))
       args: process.argv.slice(2),
     })
 
+    // Apply Postgres migrations on startup
+    await Database.applyMigrations()
+
+    // One-time JSON-to-Postgres migration for existing data
     const marker = path.join(Global.Path.data, "opencode.db")
     if (!(await Filesystem.exists(marker))) {
       const tty = process.stderr.isTTY
@@ -99,7 +103,7 @@ let cli = yargs(hideBin(process.argv))
       let last = -1
       if (tty) process.stderr.write("\x1b[?25l")
       try {
-        await JsonMigration.run(Database.Client().$client, {
+        await JsonMigration.run({
           progress: (event) => {
             const percent = Math.floor((event.current / event.total) * 100)
             if (percent === last && event.current !== event.total) return

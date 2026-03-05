@@ -132,16 +132,15 @@ export const ImportCommand = cmd({
       }
 
       const row = { ...Session.toRow(exportData.info), project_id: Instance.project.id }
-      Database.use((db) =>
+      await Database.use(async (db) =>
         db
           .insert(SessionTable)
           .values(row)
-          .onConflictDoUpdate({ target: SessionTable.id, set: { project_id: row.project_id } })
-          .run(),
+          .onConflictDoUpdate({ target: SessionTable.id, set: { project_id: row.project_id } }),
       )
 
       for (const msg of exportData.messages) {
-        Database.use((db) =>
+        await Database.use(async (db) =>
           db
             .insert(MessageTable)
             .values({
@@ -150,12 +149,11 @@ export const ImportCommand = cmd({
               time_created: msg.info.time?.created ?? Date.now(),
               data: msg.info,
             })
-            .onConflictDoNothing()
-            .run(),
+            .onConflictDoNothing(),
         )
 
         for (const part of msg.parts) {
-          Database.use((db) =>
+          await Database.use(async (db) =>
             db
               .insert(PartTable)
               .values({
@@ -164,8 +162,7 @@ export const ImportCommand = cmd({
                 session_id: exportData.info.id,
                 data: part,
               })
-              .onConflictDoNothing()
-              .run(),
+              .onConflictDoNothing(),
           )
         }
       }
