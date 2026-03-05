@@ -16,6 +16,9 @@ import { Log } from "../../util/log"
 import { PermissionNext } from "@/permission/next"
 import { errors } from "../error"
 import { lazy } from "../../util/lazy"
+import { Database } from "../../storage/db"
+import { SessionTable, MessageTable, PartTable } from "../../session/session.sql"
+import { Instance } from "../../project/instance"
 
 const log = Log.create({ service: "server" })
 
@@ -205,6 +208,82 @@ export const SessionRoutes = lazy(() =>
         const body = c.req.valid("json") ?? {}
         const session = await Session.create(body)
         return c.json(session)
+      },
+    )
+    .post(
+      "/import",
+      describeRoute({
+        summary: "Import session",
+        description:
+          "Import a session from an export JSON payload, inserting the session, messages, and parts into the local database. This is the HTTP equivalent of the `opencode import` CLI command.",
+        operationId: "session.import",
+        responses: {
+          200: {
+            description: "Successfully imported session",
+            content: {
+              "application/json": {
+                schema: resolver(Session.Info),
+              },
+            },
+          },
+          ...errors(400),
+        },
+      }),
+      validator(
+        "json",
+        z.object({
+          info: Session.Info,
+          messages: z
+            .array(
+              z.object({
+                info: MessageV2.Info,
+                parts: z.array(MessageV2.Part),
+              }),
+            )
+            .default([]),
+        }),
+      ),
+      async (c) => {
+        const body = c.req.valid("json")
+        const sessionID = body.info.id
+
+        // Single transaction for the entire import — dramatically faster than
+        // individual inserts, especially for sessions with hundreds of messages.
+        await Database.transaction(async (tx) => {
+          const row = { ...Session.toRow(body.info), project_id: Instance.project.id }
+          await tx.insert(SessionTable)
+            .values(row)
+            .onConflictDoUpdate({ target: SessionTable.id, set: { project_id: row.project_id } })
+
+          for (const msg of body.messages) {
+            await tx.insert(MessageTable)
+              .values({
+                id: msg.info.id,
+                session_id: sessionID,
+                time_created: msg.info.time?.created ?? Date.now(),
+                data: msg.info,
+              })
+              .onConflictDoNothing()
+
+            for (const part of msg.parts) {
+              await tx.insert(PartTable)
+                .values({
+                  id: part.id,
+                  message_id: msg.info.id,
+                  session_id: sessionID,
+                  data: part,
+                })
+                .onConflictDoNothing()
+            }
+          }
+        })
+
+        log.info("imported session", {
+          sessionID,
+          messages: body.messages.length,
+        })
+
+        return c.json(body.info)
       },
     )
     .delete(

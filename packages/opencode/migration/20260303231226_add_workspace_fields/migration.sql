@@ -1,5 +1,5 @@
-ALTER TABLE `workspace` ADD `type` text NOT NULL;--> statement-breakpoint
-ALTER TABLE `workspace` ADD `name` text;--> statement-breakpoint
-ALTER TABLE `workspace` ADD `directory` text;--> statement-breakpoint
-ALTER TABLE `workspace` ADD `extra` text;--> statement-breakpoint
-ALTER TABLE `workspace` DROP COLUMN `config`;
+ALTER TABLE "workspace" ADD COLUMN "type" text NOT NULL;--> statement-breakpoint
+ALTER TABLE "workspace" ADD COLUMN "name" text;--> statement-breakpoint
+ALTER TABLE "workspace" ADD COLUMN "directory" text;--> statement-breakpoint
+ALTER TABLE "workspace" ADD COLUMN "extra" jsonb;--> statement-breakpoint
+ALTER TABLE "workspace" DROP COLUMN "config";

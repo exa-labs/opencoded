@@ -1,7 +1,7 @@
-import { sqliteTable, text, integer } from "drizzle-orm/sqlite-core"
+import { pgTable, text, bigint, jsonb } from "drizzle-orm/pg-core"
 import { Timestamps } from "@/storage/schema.sql"
 
-export const ProjectTable = sqliteTable("project", {
+export const ProjectTable = pgTable("project", {
   id: text().primaryKey(),
   worktree: text().notNull(),
   vcs: text(),
@@ -9,7 +9,7 @@ export const ProjectTable = sqliteTable("project", {
   icon_url: text(),
   icon_color: text(),
   ...Timestamps,
-  time_initialized: integer(),
-  sandboxes: text({ mode: "json" }).notNull().$type<string[]>(),
-  commands: text({ mode: "json" }).$type<{ start?: string }>(),
+  time_initialized: bigint({ mode: "number" }),
+  sandboxes: jsonb().notNull().$type<string[]>(),
+  commands: jsonb().$type<{ start?: string }>(),
 })

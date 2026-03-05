@@ -78,23 +78,22 @@ export namespace ShareNext {
     })
       .then((x) => x.json())
       .then((x) => x as { id: string; url: string; secret: string })
-    Database.use((db) =>
+    await Database.use(async (db) =>
       db
         .insert(SessionShareTable)
         .values({ session_id: sessionID, id: result.id, secret: result.secret, url: result.url })
         .onConflictDoUpdate({
           target: SessionShareTable.session_id,
           set: { id: result.id, secret: result.secret, url: result.url },
-        })
-        .run(),
+        }),
     )
     fullSync(sessionID)
     return result
   }
 
-  function get(sessionID: string) {
-    const row = Database.use((db) =>
-      db.select().from(SessionShareTable).where(eq(SessionShareTable.session_id, sessionID)).get(),
+  async function get(sessionID: string) {
+    const [row] = await Database.use(async (db) =>
+      db.select().from(SessionShareTable).where(eq(SessionShareTable.session_id, sessionID)).limit(1),
     )
     if (!row) return
     return { id: row.id, secret: row.secret, url: row.url }
@@ -142,7 +141,7 @@ export namespace ShareNext {
       const queued = queue.get(sessionID)
       if (!queued) return
       queue.delete(sessionID)
-      const share = get(sessionID)
+      const share = await get(sessionID)
       if (!share) return
 
       await fetch(`${await url()}/api/share/${share.id}/sync`, {
@@ -162,7 +161,7 @@ export namespace ShareNext {
   export async function remove(sessionID: string) {
     if (disabled) return
     log.info("removing share", { sessionID })
-    const share = get(sessionID)
+    const share = await get(sessionID)
     if (!share) return
     await fetch(`${await url()}/api/share/${share.id}`, {
       method: "DELETE",
@@ -173,7 +172,7 @@ export namespace ShareNext {
         secret: share.secret,
       }),
     })
-    Database.use((db) => db.delete(SessionShareTable).where(eq(SessionShareTable.session_id, sessionID)).run())
+    await Database.use(async (db) => db.delete(SessionShareTable).where(eq(SessionShareTable.session_id, sessionID)))
   }
 
   async function fullSync(sessionID: string) {

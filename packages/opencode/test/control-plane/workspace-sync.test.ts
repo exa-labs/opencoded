@@ -55,7 +55,7 @@ describe("control-plane/workspace.startSyncing", () => {
     const id1 = Identifier.descending("workspace")
     const id2 = Identifier.descending("workspace")
 
-    Database.use((db) =>
+    await Database.use(async (db) =>
       db
         .insert(WorkspaceTable)
         .values([
@@ -74,8 +74,7 @@ describe("control-plane/workspace.startSyncing", () => {
             directory: tmp.path,
             name: "local",
           },
-        ])
-        .run(),
+        ]),
     )
 
     const done = new Promise<void>((resolve) => {
@@ -88,7 +87,7 @@ describe("control-plane/workspace.startSyncing", () => {
       GlobalBus.on("event", listener)
     })
 
-    const sync = Workspace.startSyncing(project)
+    const sync = await Workspace.startSyncing(project)
     await Promise.race([
       done,
       new Promise((_, reject) => setTimeout(() => reject(new Error("timed out waiting for sync event")), 2000)),

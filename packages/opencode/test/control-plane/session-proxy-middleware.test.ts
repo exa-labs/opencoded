@@ -57,7 +57,7 @@ async function setup(state: State) {
   const id1 = Identifier.descending("workspace")
   const id2 = Identifier.descending("workspace")
 
-  Database.use((db) =>
+  await Database.use(async (db) =>
     db
       .insert(WorkspaceTable)
       .values([
@@ -76,8 +76,7 @@ async function setup(state: State) {
           directory: tmp.path,
           name: "local",
         },
-      ])
-      .run(),
+      ]),
   )
 
   const { WorkspaceRouterMiddleware } = await import("../../src/control-plane/workspace-router-middleware")
