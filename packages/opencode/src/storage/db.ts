@@ -58,8 +58,52 @@ export namespace Database {
 
   export async function applyMigrations() {
     const db = Client()
-    await pgMigrate(db, { migrationsFolder: path.join(import.meta.dirname, "../../migration") })
-    log.info("migrations applied")
+
+    // When running from a compiled binary, OPENCODE_MIGRATIONS is inlined at
+    // build time (see script/build.ts).  The migration *folder* does not exist
+    // on disk in that case, so we run the bundled SQL statements directly
+    // inside a migration-tracking table that mirrors what drizzle-kit creates.
+    if (typeof OPENCODE_MIGRATIONS !== "undefined" && OPENCODE_MIGRATIONS && OPENCODE_MIGRATIONS.length > 0) {
+      log.info("applying bundled migrations", { count: OPENCODE_MIGRATIONS.length })
+      const raw = (db as any)._.session?.client
+      if (!raw) throw new Error("cannot obtain raw postgres client from drizzle instance")
+
+      // Ensure the drizzle migrations journal table exists
+      await raw`
+        CREATE TABLE IF NOT EXISTS "__drizzle_migrations" (
+          id SERIAL PRIMARY KEY,
+          hash TEXT NOT NULL,
+          created_at BIGINT
+        )
+      `
+
+      // Fetch already-applied hashes so we skip them
+      const applied = new Set(
+        (await raw`SELECT hash FROM "__drizzle_migrations"`).map((r: any) => r.hash),
+      )
+
+      for (const m of OPENCODE_MIGRATIONS) {
+        // drizzle-kit uses a simple hash of the SQL content
+        const hash = simpleHash(m.sql)
+        if (applied.has(hash)) continue
+        await raw.unsafe(m.sql)
+        await raw`INSERT INTO "__drizzle_migrations" (hash, created_at) VALUES (${hash}, ${m.timestamp})`
+        log.info("applied migration", { hash, timestamp: m.timestamp })
+      }
+      log.info("bundled migrations applied")
+    } else {
+      // Running from source — use the on-disk migration folder
+      await pgMigrate(db, { migrationsFolder: path.join(import.meta.dirname, "../../migration") })
+      log.info("migrations applied")
+    }
+  }
+
+  /** Simple string hash matching drizzle-kit's approach. */
+  function simpleHash(s: string): string {
+    let hash = 5381
+    let i = s.length
+    while (i) hash = (hash * 33) ^ s.charCodeAt(--i)
+    return (hash >>> 0).toString(16)
   }
 
   export async function close() {
